@@ -1,53 +1,61 @@
 from datetime import datetime
 from uuid import UUID
-
+from typing import Optional
 import beanie
 from models.model import Transaction, TransactionType, User
-from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
-
+from pydantic import BaseModel, Field
 router = APIRouter(prefix="/transfer", tags=["transfer"])
 
 class ITransferCreate(BaseModel):
-    sender_user_id: UUID
-    recipient_user_id: UUID
+    sender_user_id: str
+    recipient_user_id: str
     amount: float
     description: str
 
 @router.post("/")
 async def transfer(transfer: ITransferCreate):
     
-    sender = await User.find_one(User.id == transfer.sender_user_id)
+    # print("transfer: ", transfer)
+    sender = await User.find_one(User.id == UUID(transfer.sender_user_id))
     if not sender:
         raise HTTPException(status_code=404, detail="Sender not found")
-    recipient = await User.find_one(User.id == transfer.recipient_user_id)
+    recipient = await User.find_one(User.id == UUID(transfer.recipient_user_id))
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
 
     if sender.balance < transfer.amount:
         raise HTTPException(status_code=400, detail="Insufficient balance")
-
+    # print("sender: ", sender)
     sender.balance -= transfer.amount
     recipient.balance += transfer.amount
     sender.updated_at = datetime.now()
     recipient.updated_at = datetime.now()
     await sender.save()
     await recipient.save()
-
+    import bson
+# ValueError: cannot encode native uuid.UUID with UuidRepresentation.UNSPECIFIED. UUIDs can be manually converted to bson.Binary instances using bson.Binary.from_uuid()
     transaction = Transaction(
         user_id=sender,
         transaction_type=TransactionType.TRANSFER_OUT,
         amount=transfer.amount,
         description=transfer.description,
-        recipient_user_id=recipient
+        recipient_user_id=str(recipient.id),
+        reference_transaction_id=None
     )
+
+    print("transaction: ", transaction)
     recipient_transaction = Transaction(
         user_id=recipient,
         transaction_type=TransactionType.TRANSFER_IN,
         amount=transfer.amount,
         description=transfer.description,
-        reference_transaction_id=transaction.id
+        # reference_transaction_id=transaction.id,
+        recipient_user_id=str(recipient.id),
+        reference_transaction_id=bson.Binary.from_uuid(transaction.id)
     )
+
+    print("recipient_transaction: ", recipient_transaction)
 
     await transaction.save()
     await recipient_transaction.save()
@@ -72,9 +80,10 @@ async def get_transfer(transfer_id: UUID):
     return {
         "transfer_id": transaction.id,
         "sender_user_id": transaction.user_id.id,
-        "recipient_user_id": transaction.recipient_user_id.id,
+        "recipient_user_id": transaction.recipient_user_id,
         "amount": transaction.amount,
         "description": transaction.description,
         "status": transaction.status,
+        "reference_transaction_id": transaction.reference_transaction_id,
         "created_at": transaction.created_at
     }
