@@ -16,7 +16,7 @@ async def init_db():
 
         global client
 
-        client = AsyncIOMotorClient(mongo_uri)
+        client = AsyncIOMotorClient(mongo_uri, uuidRepresentation="standard")
         
         if not mongo_db_name:
             raise Exception("MONGO_DB_NAME is not set")

@@ -45,21 +45,24 @@ class ICreateTransaction(BaseModel):
 
 @router.post("/")
 async def create_transaction(transaction: ICreateTransaction):
-    # TypeError: 'UUID' object has no attribute 'replace'
-    transaction.user_id = transaction.user_id
+    # Convert string IDs to UUIDs
+    user_id = UUID(transaction.user_id)
     
+    reference_transaction_id = None
     if transaction.reference_transaction_id:
-        transaction.reference_transaction_id = UUID(transaction.reference_transaction_id)
+        reference_transaction_id = UUID(transaction.reference_transaction_id)
+    
+    recipient_user_id = None
     if transaction.recipient_user_id:
-        transaction.recipient_user_id = transaction.recipient_user_id
+        recipient_user_id = transaction.recipient_user_id
         
     print("--------------------------------")
-    print("user_id: ",  transaction.user_id)    
-    print("reference_transaction_id: ",  transaction.reference_transaction_id)
-    print("recipient_user_id: ",  transaction.recipient_user_id)
+    print("user_id: ",  user_id)    
+    print("reference_transaction_id: ",  reference_transaction_id)
+    print("recipient_user_id: ",  recipient_user_id)
     print("--------------------------------")
 
-    user = await User.find_one(User.id == transaction.user_id)
+    user = await User.find_one(User.id == user_id)
     print("user: ", user)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -73,17 +76,17 @@ async def create_transaction(transaction: ICreateTransaction):
 
     user.updated_at = datetime.now()
 
-    transaction = Transaction(
+    new_transaction = Transaction(
         user_id=user,
         transaction_type=transaction.transaction_type,
         amount=transaction.amount,
         description=transaction.description,
-        reference_transaction_id=transaction.reference_transaction_id,
-        recipient_user_id=transaction.recipient_user_id
+        reference_transaction_id=reference_transaction_id,
+        recipient_user_id=recipient_user_id
     )
     
     await user.save()
     
-    await transaction.save()
+    await new_transaction.save()
     
-    return transaction.model_dump()
+    return new_transaction.model_dump()

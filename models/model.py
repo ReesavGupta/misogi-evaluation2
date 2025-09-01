@@ -29,6 +29,6 @@ class Transaction(Document):
     transaction_type: TransactionType = Field(default=TransactionType.CREDIT)
     amount: float = Field(default=0.0)
     description: str = Field(default="")
-    reference_transaction_id: Optional[str] = Field(default=None)
+    reference_transaction_id: Optional[UUID] = Field(default=None)
     recipient_user_id: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.now)

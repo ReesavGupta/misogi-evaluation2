@@ -33,7 +33,6 @@ async def transfer(transfer: ITransferCreate):
     recipient.updated_at = datetime.now()
     await sender.save()
     await recipient.save()
-    import bson
     transaction = Transaction(
         user_id=sender,
         transaction_type=TransactionType.TRANSFER_OUT,
@@ -44,19 +43,21 @@ async def transfer(transfer: ITransferCreate):
     )
 
     print("transaction: ", transaction)
+    
+    # Save the first transaction first to get its ID
+    await transaction.save()
+    
     recipient_transaction = Transaction(
         user_id=recipient,
         transaction_type=TransactionType.TRANSFER_IN,
         amount=transfer.amount,
         description=transfer.description,
-        # reference_transaction_id=transaction.id,
-        recipient_user_id=str(recipient.id),
-        reference_transaction_id=bson.Binary.from_uuid(transaction.id)
+        reference_transaction_id=transaction.id,
+        recipient_user_id=str(recipient.id)
     )
 
     print("recipient_transaction: ", recipient_transaction)
 
-    await transaction.save()
     await recipient_transaction.save()
 
     return {
@@ -82,7 +83,6 @@ async def get_transfer(transfer_id: UUID):
         "recipient_user_id": transaction.recipient_user_id,
         "amount": transaction.amount,
         "description": transaction.description,
-        "status": transaction.status,
         "reference_transaction_id": transaction.reference_transaction_id,
         "created_at": transaction.created_at
     }
