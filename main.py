@@ -1,8 +1,10 @@
 import uvicorn
 from fastapi import FastAPI
-
 from db.db import init_db
 from contextlib import asynccontextmanager
+from routes.user_router import router as user_router
+from routes.wallet_router import router as wallet_router
+from routes.tansaction_router import router as transaction_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -10,6 +12,10 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(user_router)
+app.include_router(wallet_router)
+app.include_router(transaction_router)
 
 @app.get("/")
 def read_root():
