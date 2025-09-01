@@ -1,5 +1,6 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
-from models.model import Transaction
+from models.model import Transaction, TransactionType
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -25,5 +26,17 @@ async def get_transaction_detail(transaction_id: str):
 
 @router.post("/")
 async def create_transaction(transaction: Transaction):
+    if transaction.transaction_type == TransactionType.CREDIT:
+        transaction.user_id.balance += transaction.amount
+    elif transaction.transaction_type == TransactionType.DEBIT:
+        transaction.user_id.balance -= transaction.amount
+    else:
+        raise HTTPException(status_code=400, detail="Invalid transaction type")
+
+    transaction.user_id.updated_at = datetime.now()
+    
+    await transaction.user_id.save()
+    
     await transaction.save()
+    
     return transaction.model_dump()
