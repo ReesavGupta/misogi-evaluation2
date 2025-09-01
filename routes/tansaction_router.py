@@ -81,6 +81,7 @@ async def create_transaction(transaction: ICreateTransaction):
         reference_transaction_id=transaction.reference_transaction_id,
         recipient_user_id=transaction.recipient_user_id
     )
+    
     await user.save()
     
     await transaction.save()

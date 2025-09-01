@@ -34,7 +34,6 @@ async def transfer(transfer: ITransferCreate):
     await sender.save()
     await recipient.save()
     import bson
-# ValueError: cannot encode native uuid.UUID with UuidRepresentation.UNSPECIFIED. UUIDs can be manually converted to bson.Binary instances using bson.Binary.from_uuid()
     transaction = Transaction(
         user_id=sender,
         transaction_type=TransactionType.TRANSFER_OUT,
